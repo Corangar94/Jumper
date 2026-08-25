@@ -1,0 +1,34 @@
+name: Raw Token Scope Probe
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/raw-token-scope-probe.yml"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe empty private relay token scope
+        shell: bash
+        env:
+          TOKEN: AJR4IIQZU47LNAWKM7QINEDKRXFT7AA
+        run: |
+          set -u
+          probe() {
+            label="$1"
+            url="$2"
+            code="$(curl --silent --show-error --location --output "${label}.out" --write-out '%{http_code}' "$url" || true)"
+            bytes="$(wc -c < "${label}.out" 2>/dev/null || echo 0)"
+            digest="$(sha256sum "${label}.out" 2>/dev/null | cut -d' ' -f1 || true)"
+            printf '%s code=%s bytes=%s sha256=%s\n' "$label" "$code" "$bytes" "$digest"
+            head -c 80 "${label}.out" 2>/dev/null | tr '\n' ' '; echo
+          }
+          probe exact_a "https://raw.githubusercontent.com/Corangar94/FPS/master/probe-a.txt?token=${TOKEN}"
+          probe other_b "https://raw.githubusercontent.com/Corangar94/FPS/master/probe-b.txt?token=${TOKEN}"
+          probe raw_archive "https://codeload.github.com/Corangar94/FPS/zip/refs/heads/master?token=${TOKEN}"
+          probe api_archive "https://api.github.com/repos/Corangar94/FPS/zipball/master?token=${TOKEN}"
